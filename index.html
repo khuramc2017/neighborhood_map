@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Simple Map</title>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Linking the CSS style file. -->
+    <link href="css/style.css" rel="stylesheet">
+</head>
+
+<body>
+    <!-- Header -->
+    <header>
+        <button class="hamburger">&#9776;</button>
+        <button class="cross">&#735;</button>
+    </header>
+    <!-- Menu -->
+    <div class="menu">
+        <input type="search" class="form" data-bind="textInput: restaurantToFind" placeholder="Type here to Filter..." autocomplete="off" />
+        <ul data-bind="foreach: filteredData">
+            <li data-bind="text: name, name === $parent.currentSelected(), 'click': function(){$parent.selectItem($parent, $data);}"> </li>
+        </ul>
+    </div>
+    <!-- Map -->
+    <div id="map"></div>
+    <script type='text/javascript' src="js/libs/jquery.min.js"></script>
+    <script type='text/javascript' src='js/libs/knockout-3.4.2.js'></script>
+    <script src="js/script.js"></script>
+    <script id="api_script" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAkGzGslL876RBuy8-dqMEhiBWVYKnjxbw&callback=initMap" async defer></script>
+</body>
+
+</html>
