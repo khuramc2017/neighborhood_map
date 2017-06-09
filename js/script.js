@@ -319,3 +319,7 @@ function initMap() {
 function gm_authFailure() {
   alert('Failed to call Google Map API: See Browser Console for Detail');
 }
+
+function failed() {
+  alert('Failed to call Google Map API: See Browser Console for Detail');
+}
