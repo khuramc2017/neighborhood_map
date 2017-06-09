@@ -109,7 +109,7 @@ var map_style = [
         }
     ];
 
-var list_of_markers = [];
+var listOfMarkers = [];
 var defaultIcon;
 var highlightedIcon;
 var largeInfowindow;
@@ -125,15 +125,16 @@ function Restuarant(name, lat, long, cuisines, rating) {
 
 // The AJAX calls uses Zomato's API to load restuarants.
 var zomatoURL = 'https://developers.zomato.com/api/v2.1/search?count=100&lat=' + latitude + '&lon=' + longitude;
-var list_of_restaurants = [];
+var listOfRestaurants = [];
 
-console.log(list_of_restaurants);
+console.log(listOfRestaurants);
 $.ajax({
     type: 'GET',
     url: zomatoURL,
     headers: {"user-key" : "e79b76b95e744d81cb670edeed25cc40"},
     success: function (response) {
         'use strict';
+        try {
         console.log(response);
         var restuarants = response.restaurants;
         for (let i = 0; i < restuarants.length; i++) {
@@ -145,15 +146,15 @@ $.ajax({
               restuarants[i].restaurant.user_rating.rating_text
             );
             //console.log(restaurant);
-            list_of_restaurants.push(restaurant);
+            listOfRestaurants.push(restaurant);
           }
-          for (let i = 0; i < list_of_restaurants.length; i++) {
+          for (let i = 0; i < listOfRestaurants.length; i++) {
             var marker = new google.maps.Marker({
-              position: list_of_restaurants[i].tribeca,
+              position: listOfRestaurants[i].tribeca,
               map: map,
               draggable:true,
               icon: defaultIcon,
-              title:list_of_restaurants[i].name,
+              title:listOfRestaurants[i].name,
               animation: google.maps.Animation.DROP
             });
             //Adding Listeners to the marker
@@ -167,13 +168,13 @@ $.ajax({
             marker.addListener('mouseout', function() {
               this.setIcon(defaultIcon);
             });
-            list_of_markers.push(marker);
+            listOfMarkers.push(marker);
           }
-          currentMarker = list_of_markers[0];
-          //console.log(list_of_restaurants);
+          currentMarker = listOfMarkers[0];
+          //console.log(listOfRestaurants);
           //Knockout Model Framework
           var RestuarantListModel = function () {
-              this.restaurant = ko.observableArray(list_of_restaurants); // Initial items
+              this.restaurant = ko.observableArray(listOfRestaurants); // Initial items
               this.currentSelected = ko.observable();
               this.restaurantToFind = ko.observable("");
               //This handles when an item is selected from the menu.
@@ -188,7 +189,7 @@ $.ajax({
                 function findMarker(marker) {
                   return marker.title === r.name;
                 }
-                var marker = list_of_markers.find(findMarker);
+                var marker = listOfMarkers.find(findMarker);
                 toggleBounce(marker);
                 populateInfoWindow(marker, largeInfowindow);
               };
@@ -200,22 +201,22 @@ $.ajax({
                 var filteredRestaurant;
                 if (!filter) {
                   filteredRestaurant = self.restaurant();
-                  for(var i = 0; i < list_of_markers.length; i++) {
-                    list_of_markers[i].setVisible(true);
+                  for(var i = 0; i < listOfMarkers.length; i++) {
+                    listOfMarkers[i].setVisible(true);
                   }
                   return filteredRestaurant;
                 } else {
                   filteredRestaurant = ko.utils.arrayFilter(self.restaurant(), function(item) {
                     return item.name.toLowerCase().indexOf(filter) > -1;
                   });
-                  for(let i = 0; i < list_of_markers.length; i++) {
-                    list_of_markers[i].setVisible(false);
+                  for(let i = 0; i < listOfMarkers.length; i++) {
+                    listOfMarkers[i].setVisible(false);
                   }
                   for(let i = 0; i < filteredRestaurant.length; i++) {
                     function findMarker(marker) {
                       return marker.title === filteredRestaurant[i].name;
                     }
-                    var marker = list_of_markers.find(findMarker);
+                    var marker = listOfMarkers.find(findMarker);
                     marker.setVisible(true);
                   }
                   return filteredRestaurant;
@@ -223,11 +224,31 @@ $.ajax({
               });
           };
           ko.applyBindings(new RestuarantListModel());
+        } catch(e) {
+          ajaxFailed();
+        }
       },
       error: function(jqXHR, extStatus, errorThrown) {
-        alert('Failed to load Restuarants: See Browser Console for Detail');
+        ajaxFailed();
       }
 });
+
+function ajaxFailed() {
+  $('.cross').hide();
+  $('.hamburger').hide();
+  $('header').append("<div>Failed to Restuarants.</div>");
+  var marker = new google.maps.Marker({
+    position: {lat: latitude, lng: longitude},
+    map: map,
+    draggable:false,
+    icon: defaultIcon,
+    title: "Failed to load Restuarants. Please check the browser console.",
+    animation: google.maps.Animation.DROP
+  });
+  populateInfoWindow(marker, largeInfowindow);
+  listOfMarkers.push(marker);
+  alert('Failed to load Restuarants: See Browser Console for Details!');
+}
 
 //Function makes icon for the marker
 function makeMarkerIcon(icon_path, icon_color) {
@@ -242,7 +263,7 @@ function makeMarkerIcon(icon_path, icon_color) {
 
 //This function adds the jumping animation for the marker when clicked.
 function toggleBounce(marker) {
-  if(marker !== currentMarker && currentMarker !== null) {
+  if(marker !== currentMarker && currentMarker != null) {
     currentMarker.setAnimation(null);
     currentMarker = marker;
   }
@@ -263,8 +284,8 @@ function populateInfoWindow(marker, infowindow) {
    }
   if (infowindow.marker != marker) {
     infowindow.marker = marker;
-    var restaurant = list_of_restaurants.find(findRestaurant);
-    if(restaurant !== null) {
+    var restaurant = listOfRestaurants.find(findRestaurant);
+    if(restaurant != null) {
       infowindow.setContent('<div>' + restaurant.name + '</div><br/><div>Cuisines: ' + restaurant.cuisines + '</div><br/><div> Rating: '+ restaurant.rating +'</div>');
     } else {
       infowindow.setContent('<div>' + marker.title + '</div>');
