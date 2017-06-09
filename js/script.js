@@ -2,6 +2,7 @@
 /*global $, jQuery, alert*/
 var $map = $('#map');
 var map;
+var currentMarker;
 var latitude = 40.7413549;
 var longitude = -73.9980244;
 $(".cross").hide();
@@ -112,10 +113,12 @@ var highlightedIcon;
 var largeInfowindow;
 
 //Restuarant Object
-function Restuarant(name, lat, long) {
+function Restuarant(name, lat, long, cuisines, rating) {
     'use strict';
     this.name = name;
     this.tribeca = {lat: lat, lng: long};
+    this.cuisines = cuisines;
+    this.rating = rating;
 }
 
 // The AJAX calls uses Zomato's API to load restuarants.
@@ -132,36 +135,39 @@ $.ajax({
         console.log(response);
         var restuarants = response.restaurants;
         for (var i = 0; i < restuarants.length; i++) {
-        var restaurant = new Restuarant(
-          restuarants[i].restaurant.name,
-          Number(restuarants[i].restaurant.location.latitude),
-          Number(restuarants[i].restaurant.location.longitude)
-        );
-        //console.log(restaurant);
-        list_of_restaurants.push(restaurant);
+          var restaurant = new Restuarant(
+            restuarants[i].restaurant.name,
+            Number(restuarants[i].restaurant.location.latitude),
+            Number(restuarants[i].restaurant.location.longitude),
+            restuarants[i].restaurant.cuisines,
+            restuarants[i].restaurant.user_rating.rating_text
+          );
+          //console.log(restaurant);
+          list_of_restaurants.push(restaurant);
         };
         for (i = 0; i < list_of_restaurants.length; i++) {
-        var marker = new google.maps.Marker({
-          position: list_of_restaurants[i].tribeca,
-          map: map,
-          draggable:true,
-          icon: defaultIcon,
-          title:list_of_restaurants[i].name,
-          animation: google.maps.Animation.DROP
-        });
-        //Adding Listeners to the marker
-        marker.addListener('click', function(clicks) {
-            toggleBounce(this);
-            populateInfoWindow(this, largeInfowindow);
-        });
-        marker.addListener('mouseover', function() {
-          this.setIcon(highlightedIcon);
-        });
-        marker.addListener('mouseout', function() {
-          this.setIcon(defaultIcon);
-        });
-        list_of_markers.push(marker);
+          var marker = new google.maps.Marker({
+            position: list_of_restaurants[i].tribeca,
+            map: map,
+            draggable:true,
+            icon: defaultIcon,
+            title:list_of_restaurants[i].name,
+            animation: google.maps.Animation.DROP
+          });
+          //Adding Listeners to the marker
+          marker.addListener('click', function(clicks) {
+              toggleBounce(this);
+              populateInfoWindow(this, largeInfowindow);
+          });
+          marker.addListener('mouseover', function() {
+            this.setIcon(highlightedIcon);
+          });
+          marker.addListener('mouseout', function() {
+            this.setIcon(defaultIcon);
+          });
+          list_of_markers.push(marker);
         }
+        currentMarker = list_of_markers[0];
         //console.log(list_of_restaurants);
         //Knockout Model Framework
         var RestuarantListModel = function () {
@@ -191,20 +197,57 @@ $.ajax({
               var filter = self.restaurantToFind().toLowerCase();
 
               if (!filter) {
-                return self.restaurant();
+                filteredRestaurant = self.restaurant();
+                for(var i = 0; i < list_of_markers.length; i++) {
+                  list_of_markers[i].setVisible(true);
+                };
+                return filteredRestaurant;
               } else {
-                return ko.utils.arrayFilter(self.restaurant(), function(item) {
+                var filteredRestaurant = ko.utils.arrayFilter(self.restaurant(), function(item) {
                   return item.name.toLowerCase().indexOf(filter) > -1;
                 });
+                for(var i = 0; i < list_of_markers.length; i++) {
+                  list_of_markers[i].setVisible(false);
+                };
+                for(var i = 0; i < filteredRestaurant.length; i++) {
+                  function findMarker(marker) {
+                    return marker.title === filteredRestaurant[i].name;
+                  }
+                  var marker = list_of_markers.find(findMarker);
+                  marker.setVisible(true);
+                };
+                return filteredRestaurant;
               }
             });
         };
         ko.applyBindings(new RestuarantListModel());
     },
     //Error Handling.
-    error: function (request, status, error) {
-        alert(request.responseText);
-
+    error: function (jqXHR, exception) {
+      console.log(jqXHR);
+        $('header').hide();
+        var marker = new google.maps.Marker({
+          position: {lat: latitude, lng: longitude},
+          map: map,
+          draggable:true,
+          icon: defaultIcon,
+          title: "Failed to load Restuarants to the Map. Try again later",
+          animation: google.maps.Animation.DROP
+        });
+        //Adding Listeners to the marker
+        marker.addListener('click', function(clicks) {
+            toggleBounce(this);
+            populateInfoWindow(this, largeInfowindow);
+        });
+        populateInfoWindow(marker, largeInfowindow);
+        marker.addListener('mouseover', function() {
+          this.setIcon(highlightedIcon);
+        });
+        marker.addListener('mouseout', function() {
+          this.setIcon(defaultIcon);
+        });
+        list_of_markers.push(marker);
+        // Your error handling logic here..
     }
 });
 
@@ -222,6 +265,10 @@ function makeMarkerIcon(icon_path, icon_color) {
 
 //This function adds the jumping animation for the marker when clicked.
 function toggleBounce(marker) {
+  if(marker != currentMarker && currentMarker != null) {
+    currentMarker.setAnimation(null);
+    currentMarker = marker;
+  }
   if (marker.getAnimation() !== null) {
     marker.setAnimation(null);
   } else {
@@ -236,7 +283,15 @@ function populateInfoWindow(marker, infowindow) {
   // Check to make sure the infowindow is not already opened on this marker.
   if (infowindow.marker != marker) {
     infowindow.marker = marker;
-    infowindow.setContent('<div>' + marker.title + '</div>');
+    function findRestaurant(restaurant) {
+      return marker.title === restaurant.name;
+    }
+    var restaurant = list_of_restaurants.find(findRestaurant);
+    if(restaurant != null) {
+      infowindow.setContent('<div>' + restaurant.name + '</div><br/><div>Cuisines: ' + restaurant.cuisines + '</div><br/><div> Rating: '+ restaurant.rating +'</div>');
+    } else {
+      infowindow.setContent('<div>' + marker.title + '</div>');
+    }
     infowindow.open(map, marker);
     // Make sure the marker property is cleared if the infowindow is closed.
     infowindow.addListener('closeclick', function() {
@@ -251,7 +306,7 @@ function initMap() {
   //Load Map
   map = new google.maps.Map($map[0], {
     center: {lat: latitude, lng: longitude},
-    zoom: 13,
+    zoom: 17,
     styles: map_style
   });
   //Default Style for the marker icon.
