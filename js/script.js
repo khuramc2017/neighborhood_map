@@ -1,10 +1,12 @@
 /*jslint browser: true*/
 /*global $, jQuery, alert*/
+/*jshint esversion: 6 */
 var $map = $('#map');
 var map;
 var currentMarker;
 var latitude = 40.7413549;
 var longitude = -73.9980244;
+var callAjax = true;
 $(".cross").hide();
 $(".menu").hide();
 $(".hamburger").click(function () {
@@ -134,130 +136,105 @@ $.ajax({
         'use strict';
         console.log(response);
         var restuarants = response.restaurants;
-        for (var i = 0; i < restuarants.length; i++) {
-          var restaurant = new Restuarant(
-            restuarants[i].restaurant.name,
-            Number(restuarants[i].restaurant.location.latitude),
-            Number(restuarants[i].restaurant.location.longitude),
-            restuarants[i].restaurant.cuisines,
-            restuarants[i].restaurant.user_rating.rating_text
-          );
-          //console.log(restaurant);
-          list_of_restaurants.push(restaurant);
-        };
-        for (i = 0; i < list_of_restaurants.length; i++) {
-          var marker = new google.maps.Marker({
-            position: list_of_restaurants[i].tribeca,
-            map: map,
-            draggable:true,
-            icon: defaultIcon,
-            title:list_of_restaurants[i].name,
-            animation: google.maps.Animation.DROP
-          });
-          //Adding Listeners to the marker
-          marker.addListener('click', function(clicks) {
-              toggleBounce(this);
-              populateInfoWindow(this, largeInfowindow);
-          });
-          marker.addListener('mouseover', function() {
-            this.setIcon(highlightedIcon);
-          });
-          marker.addListener('mouseout', function() {
-            this.setIcon(defaultIcon);
-          });
-          list_of_markers.push(marker);
-        }
-        currentMarker = list_of_markers[0];
-        //console.log(list_of_restaurants);
-        //Knockout Model Framework
-        var RestuarantListModel = function () {
-            this.restaurant = ko.observableArray(list_of_restaurants); // Initial items
-            this.currentSelected = ko.observable();
-            this.restaurantToFind = ko.observable("");
-            //This handles when an item is selected from the menu.
-            this.selectItem = function (that, r) {
-              //that.currentSelected(r.name);
-              console.log("Item Clicked!");
-              console.log(r.name);
-              $( ".menu" ).slideToggle( "slow", function() {
-                $( ".cross" ).hide();
-                $( ".hamburger" ).show();
-              });
-              function findMarker(marker) {
-                return marker.title === r.name;
-              }
-              var marker = list_of_markers.find(findMarker);
-              toggleBounce(marker);
-              populateInfoWindow(marker, largeInfowindow);
-            }
-            //Filter items in the menu
-            var self = this;
-            this.filteredData = ko.computed(function() {
-              console.log("It's working!");
-              var filter = self.restaurantToFind().toLowerCase();
-
-              if (!filter) {
-                filteredRestaurant = self.restaurant();
-                for(var i = 0; i < list_of_markers.length; i++) {
-                  list_of_markers[i].setVisible(true);
-                };
-                return filteredRestaurant;
-              } else {
-                var filteredRestaurant = ko.utils.arrayFilter(self.restaurant(), function(item) {
-                  return item.name.toLowerCase().indexOf(filter) > -1;
-                });
-                for(var i = 0; i < list_of_markers.length; i++) {
-                  list_of_markers[i].setVisible(false);
-                };
-                for(var i = 0; i < filteredRestaurant.length; i++) {
-                  function findMarker(marker) {
-                    return marker.title === filteredRestaurant[i].name;
-                  }
-                  var marker = list_of_markers.find(findMarker);
-                  marker.setVisible(true);
-                };
-                return filteredRestaurant;
-              }
+        for (let i = 0; i < restuarants.length; i++) {
+            var restaurant = new Restuarant(
+              restuarants[i].restaurant.name,
+              Number(restuarants[i].restaurant.location.latitude),
+              Number(restuarants[i].restaurant.location.longitude),
+              restuarants[i].restaurant.cuisines,
+              restuarants[i].restaurant.user_rating.rating_text
+            );
+            //console.log(restaurant);
+            list_of_restaurants.push(restaurant);
+          }
+          for (let i = 0; i < list_of_restaurants.length; i++) {
+            var marker = new google.maps.Marker({
+              position: list_of_restaurants[i].tribeca,
+              map: map,
+              draggable:true,
+              icon: defaultIcon,
+              title:list_of_restaurants[i].name,
+              animation: google.maps.Animation.DROP
             });
-        };
-        ko.applyBindings(new RestuarantListModel());
-    },
-    //Error Handling.
-    error: function (jqXHR, exception) {
-      console.log(jqXHR);
-        $('header').hide();
-        var marker = new google.maps.Marker({
-          position: {lat: latitude, lng: longitude},
-          map: map,
-          draggable:true,
-          icon: defaultIcon,
-          title: "Failed to load Restuarants to the Map. Try again later",
-          animation: google.maps.Animation.DROP
-        });
-        //Adding Listeners to the marker
-        marker.addListener('click', function(clicks) {
-            toggleBounce(this);
-            populateInfoWindow(this, largeInfowindow);
-        });
-        populateInfoWindow(marker, largeInfowindow);
-        marker.addListener('mouseover', function() {
-          this.setIcon(highlightedIcon);
-        });
-        marker.addListener('mouseout', function() {
-          this.setIcon(defaultIcon);
-        });
-        list_of_markers.push(marker);
-        // Your error handling logic here..
-    }
+            //Adding Listeners to the marker
+            marker.addListener('click', function(clicks) {
+                toggleBounce(this);
+                populateInfoWindow(this, largeInfowindow);
+            });
+            marker.addListener('mouseover', function() {
+              this.setIcon(highlightedIcon);
+            });
+            marker.addListener('mouseout', function() {
+              this.setIcon(defaultIcon);
+            });
+            list_of_markers.push(marker);
+          }
+          currentMarker = list_of_markers[0];
+          //console.log(list_of_restaurants);
+          //Knockout Model Framework
+          var RestuarantListModel = function () {
+              this.restaurant = ko.observableArray(list_of_restaurants); // Initial items
+              this.currentSelected = ko.observable();
+              this.restaurantToFind = ko.observable("");
+              //This handles when an item is selected from the menu.
+              this.selectItem = function (that, r) {
+                //that.currentSelected(r.name);
+                console.log("Item Clicked!");
+                console.log(r.name);
+                $( ".menu" ).slideToggle( "slow", function() {
+                  $( ".cross" ).hide();
+                  $( ".hamburger" ).show();
+                });
+                function findMarker(marker) {
+                  return marker.title === r.name;
+                }
+                var marker = list_of_markers.find(findMarker);
+                toggleBounce(marker);
+                populateInfoWindow(marker, largeInfowindow);
+              };
+              //Filter items in the menu
+              var self = this;
+              this.filteredData = ko.computed(function() {
+                console.log("It's working!");
+                var filter = self.restaurantToFind().toLowerCase();
+                var filteredRestaurant;
+                if (!filter) {
+                  filteredRestaurant = self.restaurant();
+                  for(var i = 0; i < list_of_markers.length; i++) {
+                    list_of_markers[i].setVisible(true);
+                  }
+                  return filteredRestaurant;
+                } else {
+                  filteredRestaurant = ko.utils.arrayFilter(self.restaurant(), function(item) {
+                    return item.name.toLowerCase().indexOf(filter) > -1;
+                  });
+                  for(let i = 0; i < list_of_markers.length; i++) {
+                    list_of_markers[i].setVisible(false);
+                  }
+                  for(let i = 0; i < filteredRestaurant.length; i++) {
+                    function findMarker(marker) {
+                      return marker.title === filteredRestaurant[i].name;
+                    }
+                    var marker = list_of_markers.find(findMarker);
+                    marker.setVisible(true);
+                  }
+                  return filteredRestaurant;
+                }
+              });
+          };
+          ko.applyBindings(new RestuarantListModel());
+      },
+      error: function(jqXHR, extStatus, errorThrown) {
+        alert('Failed to load Restuarants: See Browser Console for Detail');
+      }
 });
-
 
 //Function makes icon for the marker
 function makeMarkerIcon(icon_path, icon_color) {
   return {
     path: icon_path,
     fillColor: icon_color,
-    fillOpacity: .85,
+    fillOpacity: 0.85,
     strokeColor: '',
     strokeWeight: 0
   };
@@ -265,7 +242,7 @@ function makeMarkerIcon(icon_path, icon_color) {
 
 //This function adds the jumping animation for the marker when clicked.
 function toggleBounce(marker) {
-  if(marker != currentMarker && currentMarker != null) {
+  if(marker !== currentMarker && currentMarker !== null) {
     currentMarker.setAnimation(null);
     currentMarker = marker;
   }
@@ -281,13 +258,13 @@ function toggleBounce(marker) {
 // on that markers position.
 function populateInfoWindow(marker, infowindow) {
   // Check to make sure the infowindow is not already opened on this marker.
+   function findRestaurant(restaurant) {
+      return marker.title === restaurant.name;
+   }
   if (infowindow.marker != marker) {
     infowindow.marker = marker;
-    function findRestaurant(restaurant) {
-      return marker.title === restaurant.name;
-    }
     var restaurant = list_of_restaurants.find(findRestaurant);
-    if(restaurant != null) {
+    if(restaurant !== null) {
       infowindow.setContent('<div>' + restaurant.name + '</div><br/><div>Cuisines: ' + restaurant.cuisines + '</div><br/><div> Rating: '+ restaurant.rating +'</div>');
     } else {
       infowindow.setContent('<div>' + marker.title + '</div>');
@@ -302,8 +279,8 @@ function populateInfoWindow(marker, infowindow) {
 
 //Initialize Google Maps API and map, defaultIcon, highlightedIcon, and largeInfowindow.
 function initMap() {
-  console.log("Building Map.");
   //Load Map
+  console.log("Building Map.");
   map = new google.maps.Map($map[0], {
     center: {lat: latitude, lng: longitude},
     zoom: 17,
@@ -316,4 +293,8 @@ function initMap() {
   //infowindow
   largeInfowindow = new google.maps.InfoWindow();
 
-};
+}
+
+function gm_authFailure() {
+  alert('Failed to call Google Map API: See Browser Console for Detail');
+}
