@@ -1,7 +1,7 @@
 /*jslint browser: true*/
 /*global $, jQuery, alert*/
 /*jshint esversion: 6 */
-var $map = $('#map');
+var $map = $('.map');
 var map;
 var currentMarker;
 var latitude = 40.7413549;
